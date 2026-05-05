@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Help & FAQ - ParkEase</title>
+  <link rel="stylesheet" href="Frame8.css">
+</head>
+<body>
+  <header>
+    <div class="logo-container" onclick="location.href='Frame3.html'">
+      <img src="images/node-2.svg" alt="ParkEase Logo" />
+      <h1>ParkEase</h1>
+    </div>
+  </header>
+  <main>
+    <h2>Help & FAQ</h2>
+    <section class="faq-section">
+      <h3>Frequently Asked Questions</h3>
+      <details>
+        <summary>How do I book a parking slot?</summary>
+        <p>Log in to your ParkEase account, navigate to the dashboard, and select "Book a Slot." Choose your location, date, and time, then confirm your booking. You'll receive a confirmation once the slot is reserved.</p>
+      </details>
+      <br>
+      <details>
+        <summary>Can I borrow a parking slot from a friend?</summary>
+        <p>Yes! Use the "Borrow Slot" feature in the app. Enter your friend's unique slot-sharing code, and if the slot is available, you can claim it for your use.</p>
+      </details>
+      <br>
+      <details>
+        <summary>How can I view my booking history?</summary>
+        <p>Go to "Your Activity" from the menu. This section displays all your past and upcoming bookings, including details like location, date, and duration.</p>
+      </details>
+      <br>
+      <details>
+        <summary>What happens if I need to cancel a booking?</summary>
+        <p>You can cancel a booking from the "Your Activity" page. Select the booking and click "Cancel." Refunds, if applicable, depend on the parking provider's policy.</p>
+      </details>
+      <br>
+      <details>
+        <summary>How do I contact support for issues?</summary>
+        <p>Use the "Contact Us" page or submit a question in the help box below. Our team will respond within 24-48 hours.</p>
+      </details>
+      <br>
+    </section>
+    <section class="help-box">
+      <h3>Need More Help?</h3>
+      <p>Submit your question below, and our support team will get back to you.</p>
+      <textarea id="help-question" rows="5" placeholder="Type your question here..." style="width: 400px; height: 100px;"></textarea>
+      <button id="submit-question">Submit</button>
+    </section>
+  </main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwb9D1YwNilCidcoNCGQXljCcbiGivLIA",
+      authDomain: "parkease-9d0a9.firebaseapp.com",
+      projectId: "parkease-9d0a9",
+      storageBucket: "parkease-9d0a9.firebasestorage.app",
+      messagingSenderId: "85004166714",
+      appId: "1:85004166714:web:ec328708f50a4997c8b703",
+      measurementId: "G-3Z0L3ZYTG5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const helpQuestionInput = document.getElementById('help-question');
+    const submitQuestionBtn = document.getElementById('submit-question');
+
+    async function submitQuestion(userId, question) {
+      try {
+        await addDoc(collection(db, 'HelpQuestions'), {
+          userId: userId,
+          question: question,
+          timestamp: new Date(),
+          status: 'pending'
+        });
+        alert('Question submitted successfully!');
+        helpQuestionInput.value = '';
+      } catch (err) {
+        console.error('Error submitting question:', err);
+        alert('Failed to submit question: ' + err.message);
+      }
+    }
+
+    submitQuestionBtn.addEventListener('click', async () => {
+      const question = helpQuestionInput.value.trim();
+      if (!question) {
+        alert('Please enter a question.');
+        return;
+      }
+      const user = auth.currentUser;
+      if (user) {
+        await submitQuestion(user.uid, question);
+      } else {
+        alert('Please log in to submit a question.');
+        window.location.href = 'Frame2.html';
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Optional: Load user data if needed
+        // loadUserData(user.uid);
+      } else {
+        alert('Please login to view this page.');
+        window.location.href = 'Frame2.html';
+      }
+    });
+  </script>
+</body>
+</html>

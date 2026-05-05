@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ParkEase</title>
+    <link rel="stylesheet" href="Frame2.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">
+            <img src="images/node-3.png" alt="ParkEase Logo">
+            <h2>ParkEase</h2>
+        </div>
+        <div class="features">
+            <div class="feature">📹 CCTV</div>
+            <div class="feature">🔍 Vehicle Inspection</div>
+            <div class="feature">🚧 Fenced</div>
+            <div class="feature">🅿️ Paved Surface</div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="image-section">
+            <img src="images/image-2-4.png" alt="Parking Image">
+        </div>
+        <div class="form-section">
+            <h2 id="form-title">Login to ParkEase</h2>
+            <div id="login-form">
+                <label>Email</label>
+                <input type="email" id="login-email" placeholder="Enter your email">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password">
+                <p id="login-error" style="color: red; display: none;"></p>
+                <button id="login-button">Login</button>
+                <div class="toggle-btn" onclick="toggleForm()">Don't have an account? Sign up</div>
+            </div>
+            <div id="signup-form" class="hidden">
+                <label>Username</label>
+                <input type="text" id="name" placeholder="Enter your username">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="Enter your email">
+                <label>Mobile No.</label>
+                <input type="text" id="mobile" placeholder="Enter your mobile number">
+                <label>Vehicle No.</label>
+                <input type="text" id="vehicleNo" placeholder="Enter your vehicle number">
+                <label>Driving License No.</label>
+                <input type="text" id="licenseNo" placeholder="Enter your license number">
+                <label>Password</label>
+                <input type="password" id="signup-password" placeholder="Enter your password">
+                <p id="validation-error" style="color: red; display: none;"></p>
+                <button id="signup-button">Sign Up</button>
+                <div class="toggle-btn" onclick="toggleForm()">Already have an account? Login</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function toggleForm() {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const formTitle = document.getElementById('form-title');
+
+            loginForm.classList.toggle('hidden');
+            signupForm.classList.toggle('hidden');
+            formTitle.innerText = signupForm.classList.contains('hidden') ? 'Login to ParkEase' : 'Sign Up to ParkEase';
+
+            document.getElementById('validation-error').style.display = 'none';
+            document.getElementById('login-error').style.display = 'none';
+        }
+    </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+        apiKey: "AIzaSyBwb9D1YwNilCidcoNCGQXljCcbiGivLIA",
+        authDomain: "parkease-9d0a9.firebaseapp.com",
+        projectId: "parkease-9d0a9",
+        storageBucket: "parkease-9d0a9.firebasestorage.app",
+        messagingSenderId: "85004166714",
+        appId: "1:85004166714:web:ec328708f50a4997c8b703",
+        measurementId: "G-3Z0L3ZYTG5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        async function createUser(userId, email, name, mobile, licenseNo, vehicleNo) {
+            try {
+                const userDocRef = doc(collection(db, "Users"), userId);
+                await setDoc(userDocRef, {
+                    email: email,
+                    mobile: mobile,
+                    name: name,
+                    licenseNo: licenseNo,
+                    vehicleNo: vehicleNo
+                });
+                console.log("User created successfully!");
+            }
+            catch (error) {
+                console.error("Error creating user:", error);
+                throw error;
+            }
+        }
+
+        async function checkUniqueValues(email, mobile, licenseNo, vehicleNo) {
+            const errorElement = document.getElementById('validation-error');
+            const usersCollection = collection(db, "Users");
+
+
+            const emailQuery = query(usersCollection, where("email", "==", email));
+            const emailSnapshot = await getDocs(emailQuery);
+            if (!emailSnapshot.empty) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Email already registered.";
+                return false;
+            }
+
+
+            const mobileQuery = query(usersCollection, where("mobile", "==", mobile));
+            const mobileSnapshot = await getDocs(mobileQuery);
+            if (!mobileSnapshot.empty) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Mobile number already registered.";
+                return false;
+            }
+
+
+            const licenseQuery = query(usersCollection, where("licenseNo", "==", licenseNo));
+            const licenseSnapshot = await getDocs(licenseQuery);
+            if (!licenseSnapshot.empty) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "License number already registered.";
+                return false;
+            }
+
+
+            const vehicleQuery = query(usersCollection, where("vehicleNo", "==", vehicleNo));
+            const vehicleSnapshot = await getDocs(vehicleQuery);
+            if (!vehicleSnapshot.empty) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Vehicle number already registered.";
+                return false;
+            }
+
+
+            errorElement.style.display = 'none';
+            return true;
+        }
+
+        async function validateAndSignup() {
+            console.log("Validation function called");
+            const errorElement = document.getElementById('validation-error');
+
+
+            const email = document.getElementById('email').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const licenseNo = document.getElementById('licenseNo').value.trim();
+            const vehicleNo = document.getElementById('vehicleNo').value.trim();
+            const password = document.getElementById('signup-password').value.trim();
+
+
+            if (!email || !name || !mobile || !licenseNo || !vehicleNo || !password) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "All fields are required.";
+                return;
+            }
+
+
+            let passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/;
+            if (!passwordRegex.test(password)) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Password must have 1 uppercase, 1 number, 1 special character, and 8+ characters.";
+                return;
+            }
+
+            try {
+
+                document.getElementById('signup-button').disabled = true;
+                document.getElementById('signup-button').innerText = "Checking...";
+
+
+                const isUnique = await checkUniqueValues(email, mobile, licenseNo, vehicleNo);
+
+                if (!isUnique) {
+                    document.getElementById('signup-button').disabled = false;
+                    document.getElementById('signup-button').innerText = "Sign Up";
+                    return;
+                }
+
+
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const newUser = userCredential.user;
+
+
+                await sendEmailVerification(newUser)
+                    .then(() => {
+                        alert("Email verification sent! Please check your inbox to verify your email address.");
+                    });
+
+                await createUser(newUser.uid, email, name, mobile, licenseNo, vehicleNo);
+
+                alert("Account created successfully! Please check your email to verify your address before logging in.");
+                toggleForm();
+            }
+            catch (error) {
+                console.error("Error during signup:", error);
+                errorElement.style.display = 'block';
+
+
+                if (error.code === 'auth/email-already-in-use') {
+                    errorElement.innerText = "Email already registered.";
+                } else {
+                    errorElement.innerText = "Signup failed: " + error.message;
+                }
+            }
+            finally {
+
+                document.getElementById('signup-button').disabled = false;
+                document.getElementById('signup-button').innerText = "Sign Up";
+            }
+        }
+
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error'); // Use the login error element
+
+            if (!email || !password) {
+                errorElement.style.display = 'block';
+                errorElement.innerText = "Email and password are required.";
+                return;
+            }
+
+            try {
+                document.getElementById('login-button').disabled = true;
+                document.getElementById('login-button').innerText = "Logging in...";
+
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                console.log("Login successful. User:", userCredential.user);
+                alert("Login successful!");
+                window.location.href = 'Frame3.html';
+            } catch (error) {
+                console.error("Error during login:", error);
+                errorElement.style.display = 'block';
+                if (error.code === 'auth/wrong-password') {
+                    errorElement.innerText = "Incorrect password. Please try again.";
+                } else if (error.code === 'auth/user-not-found') {
+                    errorElement.innerText = "User not found with this email.";
+                } else {
+                    errorElement.innerText = "Login failed: " + error.message;
+                }
+            } finally {
+                document.getElementById('login-button').disabled = false;
+                document.getElementById('login-button').innerText = "Login";
+            }
+        }
+
+        document.getElementById('signup-button').addEventListener('click', validateAndSignup);
+        document.getElementById('login-button').addEventListener('click', login);
+    </script>
+</body>
+</html>

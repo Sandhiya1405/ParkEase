@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About - ParkEase</title>
+  <link rel="stylesheet" href="Frame8.css">
+  <style>
+    .container {
+      text-align: center;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+
+    form {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #34495e;
+    }
+
+    input[type="text"],
+    input[type="tel"] {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      background-color: #3498db;
+      border: none;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwb9D1YwNilCidcoNCGQXljCcbiGivLIA",
+      authDomain: "parkease-9d0a9.firebaseapp.com",
+      projectId: "parkease-9d0a9",
+      storageBucket: "parkease-9d0a9.firebasestorage.app",
+      messagingSenderId: "85004166714",
+      appId: "1:85004166714:web:ec328708f50a4997c8b703",
+      measurementId: "G-3Z0L3ZYTG5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDocRef = doc(db, "Users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          document.getElementById("name").value = data.name || "";
+          document.getElementById("vehicleNo").value = data.vehicleNo || "";
+          document.getElementById("licenseNo").value = data.licenseNo || "";
+          document.getElementById("mobile").value = data.mobile || "";
+        }
+      }
+    });
+
+    async function saveChanges() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const updatedData = {
+        name: document.getElementById("name").value,
+        vehicleNo: document.getElementById("vehicleNo").value,
+        licenseNo: document.getElementById("licenseNo").value,
+        mobile: document.getElementById("mobile").value
+      };
+
+      try {
+        const userDocRef = doc(db, "Users", user.uid);
+        await updateDoc(userDocRef, updatedData);
+        alert("Profile updated successfully!");
+        window.location.href = "Frame3.html";
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        alert("Update failed. Check console for error.");
+      }
+    }
+
+    window.saveChanges = saveChanges;
+  </script>
+</head>
+<body>
+  <header>
+    <div class="logo-container" onclick="location.href='Frame3.html'">
+      <img src="images/node-2.svg" alt="ParkEase Logo" />
+      <h1>ParkEase</h1>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>Edit Profile</h1>
+      <form onsubmit="event.preventDefault(); saveChanges();">
+        <label for="name">Name:</label>
+        <input type="text" id="name" required />
+
+        <label for="vehicleNo">Vehicle Number:</label>
+        <input type="text" id="vehicleNo" required />
+
+        <label for="licenseNo">Driving License Number:</label>
+        <input type="text" id="licenseNo" required />
+
+        <label for="mobile">Mobile Number:</label>
+        <input type="tel" id="mobile" required />
+
+        <button type="submit">Save Changes</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

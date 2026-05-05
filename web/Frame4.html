@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Park Ease</title>
+  <link rel="stylesheet" href="Frame4.css">
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      <img src="images/node-2.svg" alt="ParkEase Logo" class="logo">
+      <h1>PARK EASE</h1>
+    </div>
+    <div class="icons">
+      <button class="user-icon" id="user-btn" aria-label="User Info">
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12ZM12 14C8.13401 14 5 16.6863 5 20V21H19V20C19 16.6863 15.866 14 12 14Z" fill="black"/>
+        </svg>
+      </button>
+      <button class="menu-icon" id="menu-btn" aria-label="Menu">☰</button>
+      <div class="dropdown" id="dropdown-menu" role="menu" aria-hidden="true">
+        <button>Edit Profile</button>
+        <button onclick="location.href='privacy.html'">Privacy Policy</button>
+        <button onclick="location.href='aboutus.html'">About Us</button>
+        <button onclick="location.href='faq.html'">Help & FAQ</button>
+        <button id="logout" aria-haspopup="true">Log Out</button>
+      </div>
+      <div class="overlay" id="overlay" tabindex="-1"></div>
+      <div class="user-info-box" id="user-info-box" role="dialog" aria-modal="true" aria-labelledby="user-info-label">
+        <label id="user-info-label">User Name</label><input type="text" id="name" readonly />
+        <label>Vehicle No</label><input type="text" id="vehicleNo" readonly />
+        <label>Driving License No</label><input type="text" id="licenseNo" readonly />
+        <label>Phone No</label><input type="text" id="mobile" readonly />
+        <button class="close-btn" id="close-btn">Close</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="request-overlay" id="request-overlay">
+    <div class="request-modal">
+      <h3>Request Parking Slot</h3>
+      <div class="form-content">
+        <div class="form-group">
+          <label for="from-date">From Date:</label>
+          <input type="date" id="from-date" required>
+        </div>
+        <div class="form-group">
+          <label for="from-time">From Time:</label>
+          <input type="time" id="from-time" required>
+        </div>
+        <div class="form-group">
+          <label for="to-date">To Date:</label>
+          <input type="date" id="to-date" required>
+        </div>
+        <div class="form-group">
+          <label for="to-time">To Time:</label>
+          <input type="time" id="to-time" required>
+        </div>
+        <div class="form-group">
+          <label for="vehicle-type">Vehicle Type:</label>
+          <select id="vehicle-type" required>
+            <option value="" disabled selected>Select vehicle type</option>
+            <option value="Car">Car</option>
+            <option value="Bike">Bike</option>
+          </select>
+        </div>
+        <div class="modal-buttons">
+          <button class="cancel-btn" id="cancel-request">Cancel</button>
+          <button class="request-btn" id="submit-request">Send Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="parking-container">
+    <img src="images/car.jpg" alt="Parking Lot" />
+    <div class="container">
+      <div class="search-bar-container">
+        <input type="text" class="search-input" placeholder="Search User">
+        <button class="search-button" onclick="searchUser()">Search</button>
+        <button class="clear-button" onclick="clearResults()">Clear</button>
+      </div>
+      <div id="user-details-table" class="search-results"></div>
+    </div>
+    <div class="friends-list-container">
+      <h2>Friends List</h2>
+    </div>
+  </div>
+
+  <div class="why-park">
+    <h2>Why you should park with us?</h2>
+    <div class="features">
+      <div class="feature-button">📹 CCTV</div>
+      <div class="feature-button">🔍 Vehicle Inspection</div>
+      <div class="feature-button">🚧 Fenced</div>
+      <div class="feature-button">🅿 Paved Surface</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, query, where, onSnapshot, arrayUnion, arrayRemove, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwb9D1YwNilCidcoNCGQXljCcbiGivLIA",
+      authDomain: "parkease-9d0a9.firebaseapp.com",
+      projectId: "parkease-9d0a9",
+      storageBucket: "parkease-9d0a9.appspot.com",
+      messagingSenderId: "85004166714",
+      appId: "1:85004166714:web:ec328708f50a4997c8b703",
+      measurementId: "G-3Z0L3ZYTG5",
+    };
+  
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const analytics = getAnalytics(app);
+    
+    let isLoggingOut = false;
+    let currentUserId = null;
+    let usersData = [];
+    let currentRequestFriend = null;
+
+    async function logout() {
+      try {
+        isLoggingOut = true;
+        await signOut(auth);
+        alert("Logged out successfully!");
+        window.location.href = 'Frame2.html';
+      } catch (error) {
+        console.error("Logout error:", error);
+        alert("Failed to logout. Try again.");
+        isLoggingOut = false; 
+      }
+    }
+
+    async function getUserData(userId) {
+      try {
+        const userDocRef = doc(db, "Users", userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          return userDocSnap.data();
+        } else {
+          console.error("User document does not exist");
+          return null;
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        throw error;
+      }
+    }
+
+    function openRequestModal(friend) {
+      currentRequestFriend = friend;
+      document.getElementById('request-overlay').style.display = 'flex';
+
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('from-date').min = today;
+      document.getElementById('to-date').min = today;
+    }
+
+    function closeRequestModal() {
+      document.getElementById('request-overlay').style.display = 'none';
+      currentRequestFriend = null;
+
+      document.getElementById('from-date').value = '';
+      document.getElementById('from-time').value = '';
+      document.getElementById('to-date').value = '';
+      document.getElementById('to-time').value = '';
+      document.getElementById('vehicle-type').value = '';
+    }
+
+    async function submitRequest() {
+      if (!currentRequestFriend || !currentUserId) return;
+
+      const requestedUserId = findUserIdByUsername(currentRequestFriend.username);
+
+      const fromDate = document.getElementById('from-date').value;
+      const fromTime = document.getElementById('from-time').value;
+      const toDate = document.getElementById('to-date').value;
+      const toTime = document.getElementById('to-time').value;
+      const vehicleType = document.getElementById('vehicle-type').value;
+
+      if (!fromDate || !fromTime || !toDate || !toTime || !vehicleType) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      if (!['Car', 'Bike'].includes(vehicleType)) {
+        alert('Please select a valid vehicle type');
+        return;
+      }
+
+      const fromDateTime = new Date(`${fromDate}T${fromTime}`);
+      const toDateTime = new Date(`${toDate}T${toTime}`);
+      const now = new Date();
+      
+      if (fromDateTime < now) {
+        alert('Start time cannot be in the past');
+        return;
+      }
+
+      if (fromDateTime >= toDateTime) {
+        alert('End time must be after start time');
+        return;
+      }
+
+      try {
+        const currentUserData = await getUserData(currentUserId);
+
+        const request = {
+          requesterId: currentUserId,
+          requesterName: currentUserData.name,
+          requesterEmail: currentUserData.email,
+          requestedUserId: requestedUserId,
+          requestedUserName: currentRequestFriend.username,
+          fromDate,
+          fromTime,
+          toDate,
+          toTime,
+          vehicleType,
+          status: 'pending',
+          timestamp: serverTimestamp(),
+          message: `${currentUserData.name} is requesting to borrow your ${vehicleType} parking slot from ${fromDate} ${fromTime} to ${toDate} ${toTime}`
+        };
+
+        await addDoc(collection(db, "ParkingRequests"), request);
+        
+        alert('Request sent successfully!');
+        closeRequestModal();
+      } catch (error) {
+        console.error('Error sending request:', error);
+        alert('Failed to send request. Please try again.');
+      }
+    }
+
+    function findUserIdByUsername(username) {
+      const user = usersData.find(u => u.username === username);
+      return user ? user.id : null;
+    }
+
+    document.addEventListener("DOMContentLoaded", async function () {
+      document.querySelector(".user-icon").addEventListener("click", function () {
+        document.getElementById("user-info-box").style.display = "block";
+        document.getElementById("overlay").style.display = "block";
+      });
+
+      document.getElementById("close-btn").addEventListener("click", function () {
+        document.getElementById("user-info-box").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
+      });
+
+      document.getElementById("menu-btn").addEventListener("click", function (event) {
+        let dropdownMenu = document.getElementById("dropdown-menu");
+        dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
+        event.stopPropagation();
+      });
+
+      document.addEventListener("click", function (event) {
+        let dropdownMenu = document.getElementById("dropdown-menu");
+        if (!dropdownMenu.contains(event.target) && event.target.id !== "menu-btn") {
+          dropdownMenu.style.display = "none";
+        }
+      });
+
+      document.getElementById("dropdown-menu").addEventListener("click", function (event) {
+        event.stopPropagation();
+      });
+
+      document.getElementById('logout').addEventListener('click', logout);
+      document.getElementById('cancel-request').addEventListener('click', closeRequestModal);
+      document.getElementById('submit-request').addEventListener('click', submitRequest);
+      document.getElementById('from-date').addEventListener('change', function() {
+        document.getElementById('to-date').min = this.value;
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const userData = await getUserData(user.uid);
+            if (userData) {
+              document.getElementById("name").value = userData.name || "";
+              document.getElementById("vehicleNo").value = userData.licenseNo || "";
+              document.getElementById("licenseNo").value = userData.vehicleNo || "";
+              document.getElementById("mobile").value = userData.mobile || "";
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
+            alert("Failed to load user data. Please check console.");
+          }
+        }
+      });
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        await fetchUsers();
+        await loadFriendsList();
+      } 
+      else {
+        if (!isLoggingOut) {
+          alert("Please log in to access the app.");
+          window.location.href = "Frame2.html";
+        }
+      }
+    });
+
+    async function fetchUsers() {
+      const querySnapshot = await getDocs(collection(db, "Users"));
+      usersData = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        usersData.push({
+          id: doc.id,
+          username: data.name || "No Name",
+          mobile: data.mobile || "",
+          vehicleNo: data.vehicleNo || "No Vehicle Number",
+          email: data.email || "No Email",
+        });
+      });
+    }
+
+    function searchUser() {
+      const searchInput = document.querySelector(".search-input").value.trim().toLowerCase();
+      const tableContainer = document.getElementById("user-details-table");
+      tableContainer.innerHTML = "";
+
+      const foundUser = usersData.find(user => user.username.toLowerCase().includes(searchInput));
+
+      if (foundUser) {
+        const isCurrentUser = foundUser.id === currentUserId;
+        
+        tableContainer.innerHTML = `
+          <table class="user-info-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Vehicle Number</th>
+                <th>Phone Number</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${foundUser.username}</td>
+                <td>${foundUser.vehicleNo}</td>
+                <td>${foundUser.mobile}</td>
+                <td>${foundUser.email}</td>
+              </tr>
+            </tbody>
+          </table>
+          ${isCurrentUser ? 
+            '<p style="color: #666; font-style: italic; margin-top: 10px;">You cannot add yourself as a friend.</p>' : 
+            '<button id="add-friend-btn">Add to Friends</button>'
+          }
+        `;
+
+        if (!isCurrentUser) {
+          setTimeout(() => {
+            const addButton = document.getElementById("add-friend-btn");
+            if (addButton) {
+              addButton.addEventListener("click", () => addToFriendsList(foundUser));
+            }
+          }, 0);
+        }
+      } else {
+        tableContainer.innerHTML = "<p>No users found with that name.</p>";
+      }
+    }
+
+    async function addToFriendsList(user) {
+      if (!currentUserId) return;
+      if (user.id === currentUserId) {
+        alert("You cannot add yourself as a friend!");
+        return;
+      }
+
+      const friendsListContainer = document.querySelector(".friends-list-container");
+      const exists = Array.from(friendsListContainer.querySelectorAll(".friend-item"))
+        .some(item => item.textContent.includes(user.username));
+
+      if (!exists) {
+        const friendItem = document.createElement("div");
+        friendItem.classList.add("friend-item");
+        
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = user.username;
+        
+        const buttonsContainer = document.createElement("div");
+        buttonsContainer.classList.add("friend-buttons");
+        
+        const requestButton = document.createElement("button");
+        requestButton.textContent = "Request";
+        requestButton.classList.add("request-friend-btn");
+        requestButton.addEventListener("click", () => openRequestModal(user));
+        
+        const removeButton = document.createElement("button");
+        removeButton.textContent = "Remove";
+        removeButton.classList.add("remove-btn");
+        removeButton.addEventListener("click", () => removeFromFriendsList(user, friendItem));
+
+        buttonsContainer.appendChild(requestButton);
+        buttonsContainer.appendChild(removeButton);
+        friendItem.appendChild(nameSpan);
+        friendItem.appendChild(buttonsContainer);
+        friendsListContainer.appendChild(friendItem);
+      }
+
+      const userRef = doc(db, "Users", currentUserId);
+      await setDoc(userRef, {
+        friends: arrayUnion({
+          username: user.username,
+          vehicleNo: user.vehicleNo,
+          mobile: user.mobile,
+          email: user.email
+        })
+      }, { merge: true });
+    }
+
+    async function removeFromFriendsList(user, friendItem) {
+      if (!currentUserId) return;
+
+      const userRef = doc(db, "Users", currentUserId);
+      await setDoc(userRef, {
+        friends: arrayRemove({
+          username: user.username,
+          vehicleNo: user.vehicleNo,
+          mobile: user.mobile,
+          email: user.email
+        })
+      }, { merge: true });
+
+      friendItem.remove();
+    }
+
+    async function loadFriendsList() {
+      if (!currentUserId) return;
+
+      const userRef = doc(db, "Users", currentUserId);
+      const docSnap = await getDoc(userRef);
+      const friendsListContainer = document.querySelector(".friends-list-container");
+      friendsListContainer.innerHTML = "<h2>Friends List</h2>";
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.friends && data.friends.length > 0) {
+          data.friends.forEach(friend => {
+            const friendItem = document.createElement("div");
+            friendItem.classList.add("friend-item");
+            
+            const nameSpan = document.createElement("span");
+            nameSpan.textContent = friend.username;
+            
+            const buttonsContainer = document.createElement("div");
+            buttonsContainer.classList.add("friend-buttons");
+            
+            const requestButton = document.createElement("button");
+            requestButton.textContent = "Request";
+            requestButton.classList.add("request-friend-btn");
+            requestButton.addEventListener("click", () => openRequestModal(friend));
+            
+            const removeButton = document.createElement("button");
+            removeButton.textContent = "Remove";
+            removeButton.classList.add("remove-btn");
+            removeButton.addEventListener("click", () => removeFromFriendsList(friend, friendItem));
+
+            buttonsContainer.appendChild(requestButton);
+            buttonsContainer.appendChild(removeButton);
+            friendItem.appendChild(nameSpan);
+            friendItem.appendChild(buttonsContainer);
+            friendsListContainer.appendChild(friendItem);
+          });
+        } else {
+          const noFriendsMsg = document.createElement("p");
+          noFriendsMsg.textContent = "No friends added yet.";
+          friendsListContainer.appendChild(noFriendsMsg);
+        }
+      }
+    }
+
+    function clearResults() {
+      document.querySelector(".search-input").value = "";
+      document.getElementById("user-details-table").innerHTML = "";
+    }
+
+    window.searchUser = searchUser;
+    window.clearResults = clearResults;
+  </script>
+</body>
+</html>
